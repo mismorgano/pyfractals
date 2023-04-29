@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "pyfractals"
+version = "0.1.0"
+description = "\"A Fractal visualizer based on Escape-time fractals (Mandelbrot set, Julia set, etc) for my complex variable course.\""
+authors = ["mismorgano <mismorgano@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pyglet = "^2.0.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
