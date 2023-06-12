@@ -3,6 +3,9 @@ import platform
 import pyglet
 from time import time
 import math
+import multiprocessing as mp
+
+
 # set process DPI aware
 def set_process_dpi_aware():
     system = platform.uname()
@@ -27,53 +30,46 @@ backgournd = pyglet.shapes.Rectangle(0, 0, WIDTH, HEIGHT, color=(255, 255, 255),
 ## ejes
 eje_y = pyglet.shapes.Rectangle(WIDTH/2, 0, 1, HEIGHT, color=(0, 0, 0), batch=batch)
 eje_x = pyglet.shapes.Rectangle(0, HEIGHT/2, WIDTH, 1, color=(0, 0, 0), batch=batch)
-plane = [[None] * HEIGHT for _ in range(WIDTH)]
 
 MAX_ITER = 80
-def mandelbrot(c):
-    z = 0
-    n = 0
-    while abs(z) <= 2 and n < MAX_ITER:
-        z=z*z +c
-        n += 1
-    return n
+
+#Now we are trying to parallelize
+
+# Here the idea is to recibe point to use in lambda, when generating (Px, Py) a tuple
+def mandelbrot(point):
+    """ Determines if the point is in the mandelbrot set or not"""
+    Px, Py = point
+    x0 = Px/WIDTH*(RE_END - RE_START) + RE_START
+    y0 = Py/HEIGHT*(IM_END - IM_START) + IM_START
+    iteration = 0
+    c = complex(x0, y0)
+    z = complex(0,0)
+    while abs(z) < 2 and iteration <= MAX_ITER:
+        z = z*z +c
+        iteration += 1
+
+    return abs(z) <= 2
+
+
 
 # Plot window
 
-esta = []
-def mandelbrot_set(plane):
-    for Px in range(WIDTH):
-        for Py in range(HEIGHT):
-            x0 = Px/WIDTH*(RE_END - RE_START) + RE_START
-            y0 = Py/HEIGHT*(IM_END - IM_START) + IM_START
-            # c = complex(x/WIDTH*(RE_END - RE_START) + RE_START, y/HEIGHT*(IM_END - IM_START) + IM_START)
-            x, y = 0, 0
-            iteration = 0
-            # while (x*x + y*y) < 4 and iteration < MAX_ITER:
-            #     xtemp = x*x -y*y + x0
-            #     y = 2*x*y + y0
-            #     x=xtemp
-            #     iteration += 1
-            c = complex(x0, y0)
-            z = complex(0,0)
-            while abs(z) < 2 and iteration <= MAX_ITER:
-                z = z*z +c
-                iteration += 1
-
-            if c := abs(z*z) < 2:
-                point = pyglet.shapes.Rectangle(Px, Py, 1, 1, color=(0, 0, 0), batch=batch)
-                # print(x, y)
-                # print(c)
-                esta.append(point)
-
+# just the point in the mandelbrot set
+points = filter(mandelbrot, ((Px,Py) for Py in range(HEIGHT) for Px in range(WIDTH)))
+# create the 'pixels' for those points
+pixels = map(lambda p:  pyglet.shapes.Rectangle(p[0], p[1], 1, 1, color=(0, 0, 0), batch=batch), points)
 current_time = time()
-mandelbrot_set(plane)
+screen = list(pixels) # this is what cost time
 print(time()-current_time)
-# esta = []
-for i in range(20):
-    for j in range(20):
-        point = pyglet.shapes.Rectangle(i, j, 1, 1, color=(200, 20, 100), batch=batch)
-        # esta.append(point)
+workers = mp.cpu_count()
+
+print(workers)
+# We cannot use multiprocessing because we cannot share openGL context, so the following won't work
+
+# with mp.Pool(workers-1) as P:
+#     screen = P.map(lambda p:  pyglet.shapes.Rectangle(p[0], p[1], 1, 1, color=(0, 0, 0), batch=batch), points)
+
+
 
 @window.event
 def on_draw():
